@@ -45,11 +45,19 @@
                                 <rect key="frame" x="161" y="357" width="71.333333333333314" height="34"/>
                                 <state key="normal" title="Button"/>
                                 <buttonConfiguration key="configuration" style="plain" title="Power"/>
+                                <connections>
+                                    <action selector="onPowerButtonDown:" destination="BYZ-38-t0r" eventType="touchDown" id="HqP-O4-uep"/>
+                                    <action selector="onPowerButtonUp:" destination="BYZ-38-t0r" eventType="touchUpInside" id="kzh-ZS-sd2"/>
+                                </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Ofp-d3-SgT">
                                 <rect key="frame" x="146" y="455" width="101" height="34.333333333333314"/>
                                 <state key="normal" title="Button"/>
                                 <buttonConfiguration key="configuration" style="plain" title="Brew"/>
+                                <connections>
+                                    <action selector="onBrewDwon:" destination="BYZ-38-t0r" eventType="touchDown" id="HJ3-gI-04z"/>
+                                    <action selector="onBrewUp:" destination="BYZ-38-t0r" eventType="touchUpInside" id="RZQ-kA-KJo"/>
+                                </connections>
                             </button>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>

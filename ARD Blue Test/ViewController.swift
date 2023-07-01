@@ -15,26 +15,33 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        NotificationCenter.default.addObserver(self, selector: #selector(handleReceivedData(_:)), name: Notification.Name("receivedData"), object: nil)
+
     }
 
-    @objc func handleReceivedData(_ notification: Notification) {
-        if let data = notification.object as? String {
-            receivedData = data
-            print(data)
-        }
-    }
     
     @IBAction func onSlider(_ sender: UISlider) {
-        let value = Int(sender.value)
+        let value = Float(sender.value)
             print("Slider value: \(value)")
+        BrevilleManager.shared.writeServoPosition(value)
+    }
+    
+    @IBAction func onPowerButtonDown(_ sender: UIButton) {
+        BrevilleManager.shared.writePowerButton(true)
+    }
 
-            // Convert integer to data
-            let data = Data("\(value)".utf8)
+    @IBAction func onPowerButtonUp(_ sender: UIButton) {
+        BrevilleManager.shared.writePowerButton(false)
+    }
 
-            if let connectedCharacteristic = BrevilleManager.shared.connectedCharacteristic {
-                BrevilleManager.shared.selectedPeripheral?.writeValue(data, for: connectedCharacteristic, type: .withResponse)
-            }
+    
+    @IBAction func onBrewDwon(_ sender: UIButton) {
+        BrevilleManager.shared.writeBrewButton(true)
+
+    }
+    
+    @IBAction func onBrewUp(_ sender: UIButton) {
+        BrevilleManager.shared.writeBrewButton(false)
+
     }
     
     @IBAction func onDisconnect(_ sender: UIButton) {

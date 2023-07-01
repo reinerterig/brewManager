@@ -7,8 +7,20 @@ class BrevilleManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
     var peripherals: [UUID: CBPeripheral] = [:]
     var selectedPeripheral: CBPeripheral?
     var connectedService: CBService?
-    var connectedCharacteristic: CBCharacteristic?
-    var timer: Timer?
+    
+    // Characteristics
+    var currentServoPositionCharacteristic: CBCharacteristic?
+    var setServoPositionCharacteristic: CBCharacteristic?
+    var servoResistanceCharacteristic: CBCharacteristic?
+    var powerButtonCharacteristic: CBCharacteristic?
+    var brewButtonCharacteristic: CBCharacteristic?
+    
+    // Properties
+    var currentServoPosition: Float?
+    var setServoPosition: Float?
+    var servoResistance: Float?
+    var powerButton: Bool?
+    var brewButton: Bool?
 
     private override init() {
         super.init()
@@ -37,10 +49,11 @@ class BrevilleManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
     func startScan() {
         peripherals.removeAll()
         manager.scanForPeripherals(withServices: nil, options: nil)
-        timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false, block: { (timer) in
+        Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in
             self.manager.stopScan()
-        })
+        }
     }
+
 
     func connectToPeripheral(_ peripheral: CBPeripheral) {
         selectedPeripheral = peripheral
@@ -66,15 +79,24 @@ class BrevilleManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
         }
     }
 
-
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         guard let characteristics = service.characteristics else { return }
         print("Discovered characteristics for service \(service.uuid): \(characteristics.map { $0.uuid })")
 
         for characteristic in characteristics {
-            if characteristic.uuid.uuidString == "19B10001-E8F2-537E-4F6C-D104768A1214" {
-                connectedCharacteristic = characteristic
-                peripheral.setNotifyValue(true, for: characteristic)
+            switch characteristic.uuid.uuidString {
+            case "19B10010-E8F2-537E-4F6C-D104768A1214":
+                currentServoPositionCharacteristic = characteristic
+            case "19B10011-E8F2-537E-4F6C-D104768A1214":
+                setServoPositionCharacteristic = characteristic
+            case "19B10012-E8F2-537E-4F6C-D104768A1214":
+                servoResistanceCharacteristic = characteristic
+            case "19B10013-E8F2-537E-4F6C-D104768A1214":
+                powerButtonCharacteristic = characteristic
+            case "19B10014-E8F2-537E-4F6C-D104768A1214":
+                brewButtonCharacteristic = characteristic
+            default:
+                break
             }
         }
     }
@@ -85,12 +107,36 @@ class BrevilleManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
             return
         }
 
-        if let value = characteristic.value, let string = String(data: value, encoding: .utf8) {
-            print("Value for characteristic \(characteristic.uuid.uuidString) is \(string)")
-            NotificationCenter.default.post(name: Notification.Name("receivedData"), object: string)
+        switch characteristic {
+        case currentServoPositionCharacteristic:
+            if let value = characteristic.value {
+                let intValue = value.withUnsafeBytes { $0.load(as: UInt32.self) }
+                currentServoPosition = Float(intValue) / 10.0
+                print("Current Servo Position: \(currentServoPosition!)")
+            }
+
+        case setServoPositionCharacteristic:
+            if let value = characteristic.value {
+                let intValue = value.withUnsafeBytes { $0.load(as: UInt32.self) }
+                setServoPosition = Float(intValue) / 10.0
+                print("Set Servo Position: \(setServoPosition!)")
+            }
+        case servoResistanceCharacteristic:
+            if let value = characteristic.value {
+                let intValue = value.withUnsafeBytes { $0.load(as: UInt32.self) }
+                servoResistance = Float(intValue) / 10.0
+                print("Servo Resistance: \(servoResistance!)")
+            }
+
+        case powerButtonCharacteristic:
+            if let value = characteristic.value {
+                powerButton = value.withUnsafeBytes { $0.load(as: Bool.self) }
+                print("Power Button: \(powerButton!)")
+            }
+        default:
+            break
         }
     }
-
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         if let error = error {
@@ -98,5 +144,40 @@ class BrevilleManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate 
         } else {
             print("Disconnected!")
         }
+    }
+
+    func writeServoPosition(_ position: Float) {
+        guard let characteristic = setServoPositionCharacteristic, let peripheral = selectedPeripheral else {
+            print("No connected peripheral or set servo position characteristic.")
+            return
+        }
+
+        var positionToSend = position
+        let data = Data(bytes: &positionToSend, count: MemoryLayout<Float>.size)
+        peripheral.writeValue(data, for: characteristic, type: .withResponse)
+    }
+
+
+
+    func writePowerButton(_ state: Bool) {
+        guard let characteristic = powerButtonCharacteristic, let peripheral = selectedPeripheral else {
+            print("No connected peripheral or power button characteristic.")
+            return
+        }
+        
+        var stateCopy = state
+        let data = Data(bytes: &stateCopy, count: MemoryLayout<Bool>.size)
+        peripheral.writeValue(data, for: characteristic, type: .withResponse)
+    }
+
+    func writeBrewButton(_ state: Bool) {
+        guard let characteristic = brewButtonCharacteristic, let peripheral = selectedPeripheral else {
+            print("No connected peripheral or brew button characteristic.")
+            return
+        }
+        
+        var stateCopy = state
+        let data = Data(bytes: &stateCopy, count: MemoryLayout<Bool>.size)
+        peripheral.writeValue(data, for: characteristic, type: .withResponse)
     }
 }
